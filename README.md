@@ -1,2 +1,1 @@
-# js-zoomClone-code
-📚 WebSocket, SocketIO, WebRTC 공부자료
+# 📚 WebSocket, SocketIO, WebRTC 공부자료
