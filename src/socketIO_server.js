@@ -24,12 +24,31 @@ wsServer.on("connection", socket => {
     //     }, 5000);
     // });
 
-    socket.on("enter_room", (roomName, done) => {
-        console.log(roomName);
-        setTimeout(() => {
-           done("Hello from the backend");             // front 에서 정의한 함수를 
-        }, 1000);
+    // socket 의 모든 이벤트가 발생하면 실행됨 (socket.onAny(funcion))
+    socket.onAny((event) => {
+        console.log(`Socket Event: ${event}`);
     });
+
+    socket["nickname"] = "Anon";
+
+    // 채팅방에 접속하는 이벤트 
+    socket.on("enter_room", (roomName, done) => {
+        socket.join(roomName);                          // socket group 생성 (채팅방생성)
+        done();                                         // frontend 에 있는 showRoom() 함수를 실행시키는 버튼을 누름
+        socket.to(roomName).emit("welcome");            // 채팅방에서 접속한 브라우저를 제외한 다른 모든 접속자들에게 메시지를 보냄 (socket.to([채팅방이름]).emit([이벤트명]);
+    });
+
+    socket.on("disconnecting", () => {
+        socket.rooms.forEach(room => socket.to(room).emit("bye", socket.nickname));
+    });
+
+    // backend 에서 동작하는 new_message 이벤트
+    socket.on("new_message", (msg, room, done) => {
+        socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
+        done();
+    });
+
+    socket.on("nickname", (nickname) => {socket["nickname"] = nickname});
 });
 
 httpServer.listen(3000, handleListen);
