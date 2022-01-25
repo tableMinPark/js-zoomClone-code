@@ -32,7 +32,6 @@ function handleMessageSubmit(event){
     input.value = "";
 }
 
-
 function showRoom(msg){
     welcome.hidden = true;
     room.hidden = false;
@@ -59,13 +58,31 @@ function handleRoomSubmit(event){
 form.addEventListener("submit", handleRoomSubmit);
 
 // 채팅방에 접속할 때마다 다른접속자들에게 알림을 주는 이벤트 (fronted에서 정의한 이벤트)
-socket.on("welcome", (user) => {
+socket.on("welcome", (user, newCount) => {
+    const h3 = room.querySelector("h3");
+    h3.innerText = `Room ${roomName} (${newCount})`;
     addMessage(`${user} joined!`);
 });
 
-socket.on("bye", (left) => {
+socket.on("bye", (left, newCount) => {
+    const h3 = room.querySelector("h3");
+    h3.innerText = `Room ${roomName} (${newCount})`;
     addMessage(`${left} left!`)
 });
 
 // fronted 에서 동작하는 new_message 이벤트
 socket.on("new_message", addMessage);
+
+// room 의 배열을 받아서 각 채팅방의 이름을 frontend 에 paint 하는 이벤트
+socket.on("room_change", (rooms) => {
+    const roomList = welcome.querySelector("ul");
+    if (rooms.length === 0){
+        roomList.innerHTML = "";
+        return;
+    }
+    rooms.forEach(room => {
+        const li = document.createElement("li");
+        li.innerText = room;
+        roomList.append(li);
+    })
+});
