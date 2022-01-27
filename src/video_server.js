@@ -26,6 +26,10 @@ wsServer.on("connection", socket => {
     socket.on("answer", (answer, roomName) => {             // edge 에서 생성한 answer 를 chrome 으로 전달
         socket.to(roomName).emit("answer", answer);
     });
+
+    socket.on("ice", (ice, roomName) => {
+        socket.to(roomName).emit("ice", ice);
+    });
 });
 
 const handleListen = () => console.log(`Listening on http://localhost:3000`);

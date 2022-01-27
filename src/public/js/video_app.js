@@ -92,6 +92,13 @@ function handleCameraClick(){
 
 async function handleCameraChange(){
     await getMedia(camerasSelect.value);
+    if (myPeerConnection){
+        const videoTrack = myStream.getVideoTracks()[0];
+        const videoSender = myPeerConnection
+                            .getSenders()
+                            .find(sender => sender.track.kind === "video");
+        videoSender.replaceTrack(videoTrack);
+    }
 }
 
 muteBtn.addEventListener("click", handleMuteClick);
@@ -140,6 +147,11 @@ socket.on("answer", (answer) => {                           // chrome
     myPeerConnection.setRemoteDescription(answer);          // edge 에서 생성된 answer 를 chrome 에서 받음 (chrome - setRemoteDescription) 
 });
 
+socket.on("ice", ice => {
+    console.log("recive candidate");
+    myPeerConnection.addIceCandidate(ice);
+});
+
 /*
 (chrome 이 채팅방 생성 -> edge 가 채팅방에 접속했다는 가정)
 chrome  - Local     : offer
@@ -151,5 +163,17 @@ edge    - Remote    : offer
 // RTC Code
 function makeConnection(){
     myPeerConnection = new RTCPeerConnection();
+    myPeerConnection.addEventListener("icecandidate", handleIce);
+    myPeerConnection.addEventListener("addstream", handleAddStream);
     myStream.getTracks().forEach(track => myPeerConnection.addTrack(track, myStream));
+}
+
+function handleIce(data){
+    console.log("send candidate");
+    socket.emit("ice", data.candidate, roomName);
+}
+
+function handleAddStream(data){
+    const peerFace = document.querySelector("#peerFace");
+    peerFace.srcObject = data.stream;
 }
