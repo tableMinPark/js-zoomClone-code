@@ -15,6 +15,7 @@ let muted = false;
 let cameraOff = false;
 let roomName;
 let myPeerConnection;
+let myDataChannel;
 
 async function getCameras(){
     try{
@@ -48,7 +49,7 @@ async function getMedia(deviceId) {
     };
 
 
-    try {    
+    try {   
         myStream = await navigator.mediaDevices.getUserMedia(
             deviceId ? cameraConstrains : initialConstrains
         );
@@ -131,12 +132,19 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
 // Socket Code
 socket.on("welcome", async () => {                          // chrome
+    myDataChannel = myPeerConnection.createDataChannel("chat");
+    myDataChannel.addEventListener("message", console.log);
+    console.log("made data channel");
     const offer = await myPeerConnection.createOffer();     // chrome 의 offer 생성
     myPeerConnection.setLocalDescription(offer);
     socket.emit("offer", offer, roomName);
 })
 
 socket.on("offer", async (offer) => {                       // edge
+    myPeerConnection.addEventListener("datachannel", (event) => {
+        myDataChannel = event.channel;
+        myDataChannel.addEventListener("message", console.log);
+    });
     myPeerConnection.setRemoteDescription(offer);           // chrome 에서 생성된 offer 를 edge 에서 받음
     const answer = await myPeerConnection.createAnswer();   // chrome 으로 보낼 answer 생성
     myPeerConnection.setLocalDescription(answer);
@@ -148,7 +156,6 @@ socket.on("answer", (answer) => {                           // chrome
 });
 
 socket.on("ice", ice => {
-    console.log("recive candidate");
     myPeerConnection.addIceCandidate(ice);
 });
 
@@ -162,14 +169,25 @@ edge    - Remote    : offer
 
 // RTC Code
 function makeConnection(){
-    myPeerConnection = new RTCPeerConnection();
+    myPeerConnection = new RTCPeerConnection({
+        iceServers: [           // stun 서버설정 : 다른네트워크에 public IP 를 알려주기 위함
+            {
+                urls: [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302",
+                ],
+            },
+        ],
+    });
     myPeerConnection.addEventListener("icecandidate", handleIce);
     myPeerConnection.addEventListener("addstream", handleAddStream);
     myStream.getTracks().forEach(track => myPeerConnection.addTrack(track, myStream));
 }
 
 function handleIce(data){
-    console.log("send candidate");
     socket.emit("ice", data.candidate, roomName);
 }
 
